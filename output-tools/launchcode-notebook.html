@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jamal OS — LaunchCode Notebook</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg:#0f1115; --panel:#171a21; --panel2:#11151c; --border:#2a2f3a;
+      --text:#eef2f7; --muted:#98a2b3; --accent:#8ab4ff; --warn:#f4c36a;
+    }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+    .app{max-width:1500px;margin:0 auto;padding:18px}.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+    h1{font-size:22px;margin:0}.sub{color:var(--muted);font-size:13px;margin-top:4px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+    button,input,textarea,select{font:inherit} button{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 12px;cursor:pointer;font-weight:650} button:hover{border-color:var(--accent)} button.primary{background:var(--accent);color:#0d1117;border-color:var(--accent)}
+    .grid{display:grid;grid-template-columns:330px 1fr;gap:14px}.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden}.head{padding:12px 14px;border-bottom:1px solid var(--border);font-weight:700}
+    .side{padding:12px}.field{margin-bottom:11px}.field label{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}.field input,.field select,.field textarea{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px}.field textarea{min-height:100px;resize:vertical}.status{font-size:12px;color:var(--muted);margin-top:8px}
+    .tabs{display:flex;border-bottom:1px solid var(--border);overflow:auto}.tab{padding:10px 14px;cursor:pointer;color:var(--muted);border-right:1px solid var(--border);white-space:nowrap}.tab.active{color:var(--text);background:var(--panel2)}
+    .content{padding:14px}.section{display:none}.section.active{display:block}.section h2{font-size:16px;margin:0 0 10px}.notearea{width:100%;min-height:500px;background:#0b0d11;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:14px;resize:vertical;line-height:1.55}
+    #editor{height:500px;border:1px solid var(--border);border-radius:10px;overflow:hidden}.console{margin-top:10px;min-height:120px;max-height:240px;overflow:auto;background:#0b0d11;border:1px solid var(--border);border-radius:10px;padding:12px;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    math-field{display:block;width:100%;min-height:58px;background:#0b0d11;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:22px}.mathnote{width:100%;margin-top:10px;min-height:180px;background:#0b0d11;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:12px}
+    .packet{white-space:pre-wrap;background:#0b0d11;border:1px solid var(--border);border-radius:10px;padding:12px;min-height:330px;max-height:520px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.hint{color:var(--muted);font-size:13px;line-height:1.45;margin-bottom:10px}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}#editor{height:420px}}
+  </style>
+  <script type="module" src="https://unpkg.com/mathlive?module"></script>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div><h1>Jamal OS — LaunchCode Notebook</h1><div class="sub">Notes become review evidence. Code becomes runnable evidence. Math stays structured. Everything autosaves in this browser.</div></div>
+    <div class="actions">
+      <button id="newBtn">New Session</button>
+      <button id="exportBtn">Export JSON</button>
+      <button class="primary" id="packetBtn">Prepare Review Packet</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <aside class="panel">
+      <div class="head">Session metadata</div>
+      <div class="side">
+        <div class="field"><label>Topic / lesson</label><input id="topic" placeholder="e.g. Arrays & Objects — find/filter/reduce" /></div>
+        <div class="field"><label>Source</label><input id="source" placeholder="LaunchCode / slide deck / module" /></div>
+        <div class="field"><label>Concept tags (comma-separated)</label><input id="tags" placeholder="arrays, objects, callbacks" /></div>
+        <div class="field"><label>Confidence</label><select id="confidence"><option value="1">1 — very shaky</option><option value="2">2 — shaky</option><option value="3" selected>3 — usable</option><option value="4">4 — strong</option><option value="5">5 — can teach it</option></select></div>
+        <div class="field"><label>What confused me?</label><textarea id="confusion" placeholder="Capture the exact point of confusion, not just 'I don't get it'."></textarea></div>
+        <div class="field"><label>What do I think I understand?</label><textarea id="understand" placeholder="Explain it in your own words."></textarea></div>
+        <div class="status" id="saveStatus">Autosave ready.</div>
+      </div>
+    </aside>
+
+    <main class="panel">
+      <div class="tabs">
+        <div class="tab active" data-tab="notes">Notes</div>
+        <div class="tab" data-tab="code">Code</div>
+        <div class="tab" data-tab="math">Math</div>
+        <div class="tab" data-tab="review">Review Packet</div>
+      </div>
+      <div class="content">
+        <section id="notes" class="section active">
+          <h2>Learning notes</h2>
+          <div class="hint">Write explanations, examples, misconceptions, patterns, and questions. Favor your own language over copied definitions.</div>
+          <textarea id="notesArea" class="notearea" placeholder="Example:\nArray.find() returns the first element whose callback returns truthy. With braces in an arrow callback, I need explicit return...\n\nQuestions I still have:\n..."></textarea>
+        </section>
+
+        <section id="code" class="section">
+          <h2>Monaco code scratchpad</h2>
+          <div class="actions" style="margin-bottom:10px"><button id="runBtn">Run JavaScript</button><button id="clearConsoleBtn">Clear Output</button></div>
+          <div id="editor"></div>
+          <div class="console" id="consoleOut">Run code when useful. Your final code and output are included in the review packet.</div>
+        </section>
+
+        <section id="math" class="section">
+          <h2>Math / formal notation</h2>
+          <div class="hint">Use MathLive for formulas, complexity, recurrences, probability, SQL-style relational reasoning, or algorithm notes.</div>
+          <math-field id="mathField" virtual-keyboard-mode="manual">x = \frac{-b\pm\sqrt{b^2-4ac}}{2a}</math-field>
+          <textarea id="mathExplain" class="mathnote" placeholder="Explain what the formula means and when you would use it."></textarea>
+        </section>
+
+        <section id="review" class="section">
+          <h2>Review packet for ChatGPT / Convergence</h2>
+          <div class="hint">This deliberately includes your own explanations and uncertainty so I can challenge you, generate Mochi cards selectively, and schedule cold retrieval.</div>
+          <div class="actions" style="margin-bottom:10px"><button class="primary" id="copyPacketBtn">Copy Review Packet</button></div>
+          <div id="packet" class="packet">Click “Prepare Review Packet.”</div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+const KEY='jamal-os-launchcode-notebook-v1';
+const initialCode=`// LaunchCode notebook scratchpad\n// Write examples, predictions, or experiments here.\n\n`;
+let editor=null, lastOutput='';
+const $=id=>document.getElementById(id);
+const fields=['topic','source','tags','confidence','confusion','understand','notesArea','mathExplain'];
+
+function snapshot(){return {
+  version:1, savedAt:new Date().toISOString(),
+  topic:$('topic').value, source:$('source').value, tags:$('tags').value,
+  confidence:$('confidence').value, confusion:$('confusion').value,
+  understand:$('understand').value, notes:$('notesArea').value,
+  code:editor?editor.getValue():initialCode, console:lastOutput,
+  mathLatex:$('mathField')?.value||'', mathExplanation:$('mathExplain').value
+}}
+function save(){localStorage.setItem(KEY,JSON.stringify(snapshot()));$('saveStatus').textContent='Saved '+new Date().toLocaleTimeString();}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(!d)return;fields.forEach(k=>{const el=$(k); if(el && d[k]!==undefined) el.value=d[k];}); if(d.notes!==undefined)$('notesArea').value=d.notes; if(d.mathLatex!==undefined && $('mathField')) $('mathField').value=d.mathLatex; lastOutput=d.console||''; $('consoleOut').textContent=lastOutput||'No saved output.'; window.__savedCode=d.code||initialCode;}catch(e){}}
+fields.forEach(id=>$(id).addEventListener('input',save));
+$('mathField').addEventListener('input',save);
+
+function makePacket(){const d=snapshot(); const p=`JAMAL OS — LAUNCHCODE NOTEBOOK REVIEW PACKET\nTopic: ${d.topic||'(none)'}\nSource: ${d.source||'(none)'}\nTags: ${d.tags||'(none)'}\nConfidence: ${d.confidence}/5\nSaved: ${d.savedAt}\n\n=== WHAT I THINK I UNDERSTAND ===\n${d.understand||'(blank)'}\n\n=== WHAT CONFUSED ME ===\n${d.confusion||'(blank)'}\n\n=== NOTES ===\n${d.notes||'(blank)'}\n\n=== CODE ===\n${d.code||'(blank)'}\n\n=== LAST CONSOLE OUTPUT ===\n${d.console||'(none)'}\n\n=== MATH / FORMAL NOTATION ===\n${d.mathLatex||'(none)'}\n\n=== MATH EXPLANATION ===\n${d.mathExplanation||'(blank)'}\n\n=== REQUEST TO REVIEWER ===\n1. Identify misconceptions or weak explanations.\n2. Challenge me with cold-retrieval questions and one transfer problem.\n3. Recommend only high-value Mochi cards.\n4. Update my Convergence mastery state based on demonstrated evidence.`; $('packet').textContent=p; return p;}
+$('packetBtn').onclick=()=>{makePacket();document.querySelector('[data-tab="review"]').click();};
+$('copyPacketBtn').onclick=async()=>{const p=makePacket();await navigator.clipboard.writeText(p);$('copyPacketBtn').textContent='Copied';setTimeout(()=>$('copyPacketBtn').textContent='Copy Review Packet',1200)};
+$('exportBtn').onclick=()=>{const blob=new Blob([JSON.stringify(snapshot(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`launchcode-notes-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href)};
+$('newBtn').onclick=()=>{if(!confirm('Start a new notebook session? This clears the current local session. Export first if needed.'))return;localStorage.removeItem(KEY);location.reload();};
+
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));t.classList.add('active');$(t.dataset.tab).classList.add('active'); if(editor) editor.layout();});
+
+const loader=document.createElement('script');loader.src='https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js';loader.onload=()=>{require.config({paths:{vs:'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs'}});require(['vs/editor/editor.main'],()=>{editor=monaco.editor.create($('editor'),{value:window.__savedCode||initialCode,language:'javascript',theme:'vs-dark',automaticLayout:true,minimap:{enabled:false},fontSize:15,wordWrap:'on'});editor.onDidChangeModelContent(save);$('saveStatus').textContent='Autosave active.';});};document.head.appendChild(loader);
+
+$('runBtn').onclick=async()=>{if(!editor)return;const logs=[];const ol=console.log,oe=console.error;const fmt=v=>typeof v==='string'?v:(()=>{try{return JSON.stringify(v,null,2)}catch{return String(v)}})();console.log=(...a)=>logs.push(a.map(fmt).join(' '));console.error=(...a)=>logs.push('ERROR: '+a.map(fmt).join(' '));try{const AF=Object.getPrototypeOf(async function(){}).constructor;await new AF(editor.getValue())();if(!logs.length)logs.push('(completed with no console output)');}catch(e){logs.push('UNCAUGHT ERROR: '+(e?.stack||String(e)))}finally{console.log=ol;console.error=oe}lastOutput=logs.join('\n');$('consoleOut').textContent=lastOutput;save();};
+$('clearConsoleBtn').onclick=()=>{lastOutput='';$('consoleOut').textContent='Output cleared.';save();};
+load();
+</script>
+</body>
+</html>
