@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LaunchCode Cold Retrieval — Monaco</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1115;
+      --panel: #171a21;
+      --border: #2a2f3a;
+      --text: #e6e9ef;
+      --muted: #9aa3b2;
+      --accent: #7aa2f7;
+      --good: #9ece6a;
+      --warn: #e0af68;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .app { max-width: 1500px; margin: 0 auto; padding: 18px; }
+    .topbar {
+      display: flex; gap: 12px; align-items: center; justify-content: space-between;
+      margin-bottom: 14px; flex-wrap: wrap;
+    }
+    h1 { font-size: 20px; margin: 0; }
+    .subtitle { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      appearance: none; border: 1px solid var(--border); background: var(--panel); color: var(--text);
+      border-radius: 8px; padding: 9px 13px; cursor: pointer; font-weight: 600;
+    }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent); color: #0d1117; border-color: var(--accent); }
+    .layout {
+      display: grid; grid-template-columns: minmax(290px, 0.8fr) minmax(520px, 1.7fr);
+      gap: 14px; align-items: stretch;
+    }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    }
+    .panel-head { padding: 12px 14px; border-bottom: 1px solid var(--border); font-weight: 700; }
+    .prompt-wrap { padding: 14px; }
+    .prompt {
+      border: 1px solid var(--border); border-radius: 10px; padding: 13px; margin-bottom: 12px;
+      background: rgba(255,255,255,0.015);
+    }
+    .prompt h2 { font-size: 15px; margin: 0 0 8px; }
+    .prompt p, .prompt li { color: var(--muted); font-size: 14px; line-height: 1.45; }
+    .prompt ol, .prompt ul { padding-left: 20px; margin-bottom: 0; }
+    .status { font-size: 13px; color: var(--muted); }
+    #editor { width: 100%; height: 620px; }
+    .output {
+      min-height: 145px; max-height: 250px; overflow: auto; padding: 12px 14px;
+      white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #0b0d11; color: #d9e1ee;
+    }
+    .footer-note { color: var(--muted); font-size: 12px; margin-top: 10px; }
+    .timer { font-variant-numeric: tabular-nums; color: var(--warn); font-weight: 700; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      #editor { height: 520px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div>
+        <h1>LaunchCode Cold Retrieval — Return Flow / Array.find / Async</h1>
+        <div class="subtitle">Closed-book first. Predict before running. Explain where every value goes.</div>
+      </div>
+      <div class="controls">
+        <span class="timer" id="timer">10:00</span>
+        <button id="startTimer">Start 10-min retrieval</button>
+        <button id="resetBtn">Reset editor</button>
+        <button class="primary" id="runBtn">Run JavaScript</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <div class="panel-head">Cold retrieval prompts</div>
+        <div class="prompt-wrap">
+          <div class="prompt">
+            <h2>1. Normal return values</h2>
+            <p>Without notes, write a function that returns a value and another function that consumes it.</p>
+            <ul>
+              <li>Label: input → operation → returned value → consumer.</li>
+              <li>Before running, write your predicted output as a comment.</li>
+            </ul>
+          </div>
+
+          <div class="prompt">
+            <h2>2. Array.find()</h2>
+            <p>Create an array of objects and use <code>find()</code> to return the first matching object.</p>
+            <ul>
+              <li>Explain in a comment what the callback itself must return.</li>
+              <li>Include one version that fails because of a missing callback return, then fix it.</li>
+            </ul>
+          </div>
+
+          <div class="prompt">
+            <h2>3. async return flow</h2>
+            <p>Create one <code>async</code> function that returns data.</p>
+            <ol>
+              <li>Consume it with <code>.then()</code>.</li>
+              <li>Consume it again with <code>await</code>.</li>
+              <li>Comment what the async function returns immediately.</li>
+            </ol>
+          </div>
+
+          <div class="prompt">
+            <h2>4. Error boundary</h2>
+            <p>Throw or reject one error. Catch it once with <code>.catch()</code> and once with <code>try/catch</code>.</p>
+            <p>Explain which boundary receives the error in each version.</p>
+          </div>
+
+          <div class="prompt">
+            <h2>Success condition</h2>
+            <p>You can explain the output before execution and correctly trace the value/error from producer to consumer. If yes, stop remediation and move back to LaunchCode.</p>
+          </div>
+
+          <div class="status" id="status">Monaco is loading… Internet access is required the first time for the editor library.</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">Monaco JavaScript editor</div>
+        <div id="editor"></div>
+        <div class="panel-head">Console output</div>
+        <div id="output" class="output">Run your code when you're ready.</div>
+      </section>
+    </div>
+
+    <div class="footer-note">
+      Rule: do not search for answers during the 10-minute retrieval. Use the output only to compare your prediction with actual behavior.
+    </div>
+  </div>
+
+  <script>
+    const initialCode = `// COLD RETRIEVAL
+// Do not look anything up yet.
+// For every section: write PREDICTION comments before running.
+
+// 1) NORMAL RETURN FLOW
+// Input -> operation -> returned value -> consumer
+
+
+
+// 2) Array.find()
+// Explain: what must the callback return?
+
+
+
+// Include a broken version caused by a missing callback return, then fix it.
+
+
+
+// 3) ASYNC RETURN FLOW
+// What does an async function return immediately?
+
+
+
+// Consume the same async result with .then()
+
+
+
+// Consume it again with await
+
+
+
+// 4) ERROR BOUNDARIES
+// Version A: Promise rejection + .catch()
+
+
+
+// Version B: await + try/catch()
+
+
+`;
+
+    let editor;
+    const output = document.getElementById('output');
+    const status = document.getElementById('status');
+
+    const loader = document.createElement('script');
+    loader.src = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js';
+    loader.onload = () => {
+      require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' }});
+      require(['vs/editor/editor.main'], function () {
+        editor = monaco.editor.create(document.getElementById('editor'), {
+          value: initialCode,
+          language: 'javascript',
+          theme: 'vs-dark',
+          automaticLayout: true,
+          fontSize: 15,
+          minimap: { enabled: false },
+          wordWrap: 'on',
+          tabSize: 2,
+          insertSpaces: true,
+          scrollBeyondLastLine: false
+        });
+        status.textContent = 'Monaco ready. Start the timer, code from memory, predict, then run.';
+      });
+    };
+    loader.onerror = () => {
+      status.textContent = 'Monaco failed to load. Check your internet connection and reopen the file.';
+    };
+    document.head.appendChild(loader);
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if (editor) editor.setValue(initialCode);
+      output.textContent = 'Editor reset.';
+    });
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+      if (!editor) {
+        output.textContent = 'Monaco is still loading.';
+        return;
+      }
+
+      const code = editor.getValue();
+      const logs = [];
+      const originalLog = console.log;
+      const originalError = console.error;
+
+      const stringify = (v) => {
+        if (typeof v === 'string') return v;
+        try { return JSON.stringify(v, null, 2); } catch { return String(v); }
+      };
+
+      console.log = (...args) => logs.push(args.map(stringify).join(' '));
+      console.error = (...args) => logs.push('ERROR: ' + args.map(stringify).join(' '));
+
+      try {
+        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+        const fn = new AsyncFunction(code);
+        await fn();
+        if (!logs.length) logs.push('(Code completed with no console output.)');
+      } catch (err) {
+        logs.push('UNCAUGHT ERROR: ' + (err && err.stack ? err.stack : String(err)));
+      } finally {
+        console.log = originalLog;
+        console.error = originalError;
+      }
+
+      output.textContent = logs.join('\n');
+    });
+
+    let timerHandle = null;
+    document.getElementById('startTimer').addEventListener('click', () => {
+      if (timerHandle) clearInterval(timerHandle);
+      let seconds = 10 * 60;
+      const timer = document.getElementById('timer');
+      const render = () => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        timer.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      };
+      render();
+      timerHandle = setInterval(() => {
+        seconds -= 1;
+        render();
+        if (seconds <= 0) {
+          clearInterval(timerHandle);
+          timerHandle = null;
+          timer.textContent = 'TIME';
+          status.textContent = 'Cold retrieval is over. Now use execution results to diagnose misses.';
+        }
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
