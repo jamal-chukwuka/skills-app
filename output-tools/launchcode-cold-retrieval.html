@@ -80,6 +80,7 @@
         <button id="startTimer">Start 10-min retrieval</button>
         <button id="resetBtn">Reset editor</button>
         <button class="primary" id="runBtn">Run JavaScript</button>
+        <button id="prepareBtn">Prepare Submission</button>
       </div>
     </div>
 
@@ -137,6 +138,18 @@
         <div id="output" class="output">Run your code when you're ready.</div>
       </section>
     </div>
+
+    <section class="panel" style="margin-top:14px;">
+      <div class="panel-head">Submission packet</div>
+      <div style="padding:14px;">
+        <p class="status" style="margin-top:0;">When finished, click <strong>Prepare Submission</strong>. This packages your code, console output, and elapsed retrieval time into one block.</p>
+        <textarea id="submission" aria-label="Cold retrieval submission packet" style="width:100%;min-height:220px;background:#0b0d11;color:#d9e1ee;border:1px solid var(--border);border-radius:8px;padding:12px;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;" placeholder="Your submission packet will appear here."></textarea>
+        <div class="controls" style="margin-top:10px;">
+          <button id="copyBtn">Copy Submission</button>
+        </div>
+        <div class="status" id="copyStatus" aria-live="polite"></div>
+      </div>
+    </section>
 
     <div class="footer-note">
       Rule: do not search for answers during the 10-minute retrieval. Use the output only to compare your prediction with actual behavior.
@@ -254,9 +267,14 @@
     });
 
     let timerHandle = null;
+    let retrievalStartedAt = null;
+    let lastRemainingSeconds = 10 * 60;
+
     document.getElementById('startTimer').addEventListener('click', () => {
       if (timerHandle) clearInterval(timerHandle);
       let seconds = 10 * 60;
+      retrievalStartedAt = Date.now();
+      lastRemainingSeconds = seconds;
       const timer = document.getElementById('timer');
       const render = () => {
         const m = Math.floor(seconds / 60);
@@ -266,6 +284,7 @@
       render();
       timerHandle = setInterval(() => {
         seconds -= 1;
+        lastRemainingSeconds = Math.max(0, seconds);
         render();
         if (seconds <= 0) {
           clearInterval(timerHandle);
@@ -274,6 +293,61 @@
           status.textContent = 'Cold retrieval is over. Now use execution results to diagnose misses.';
         }
       }, 1000);
+    });
+
+    document.getElementById('prepareBtn').addEventListener('click', () => {
+      if (!editor) {
+        output.textContent = 'Monaco is still loading.';
+        return;
+      }
+      const elapsed = retrievalStartedAt
+        ? Math.max(0, Math.round((Date.now() - retrievalStartedAt) / 1000))
+        : (10 * 60 - lastRemainingSeconds);
+      const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const ss = String(elapsed % 60).padStart(2, '0');
+      const packet = [
+        'COLD RETRIEVAL SUBMISSION',
+        'Exercise: Return Flow / Array.find / Async / Error Boundaries',
+        `Elapsed retrieval time: ${mm}:${ss}`,
+        '',
+        '=== CODE + PREDICTIONS ===',
+        editor.getValue(),
+        '',
+        '=== CONSOLE OUTPUT ===',
+        output.textContent || '(No console output captured.)',
+        '',
+        '=== SELF-CHECK ===',
+        '1. Which part felt least certain?',
+        '2. Did any actual output differ from your prediction? If yes, where?',
+        '3. Did you look anything up before finishing the cold retrieval? yes/no'
+      ].join('\n');
+      document.getElementById('submission').value = packet;
+      document.getElementById('copyStatus').textContent = 'Submission packet prepared. Answer the three self-check questions, then copy it.';
+      document.getElementById('submission').focus();
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      const box = document.getElementById('submission');
+      const statusNode = document.getElementById('copyStatus');
+      if (!box.value.trim()) {
+        statusNode.textContent = 'Prepare the submission first.';
+        return;
+      }
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(box.value);
+        } else {
+          box.focus();
+          box.select();
+          document.execCommand('copy');
+          box.setSelectionRange(0, 0);
+        }
+        statusNode.textContent = 'Copied. Paste this packet into ChatGPT as “Cold retrieval submission.”';
+      } catch {
+        box.focus();
+        box.select();
+        statusNode.textContent = 'Copy was blocked by the browser. The packet is selected—use your normal copy command.';
+      }
     });
   </script>
 </body>
