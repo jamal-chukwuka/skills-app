@@ -1,0 +1,42 @@
+{
+  "id": "algoexpert-level1",
+  "provider": "AlgoExpert",
+  "mode": "deep-link-plus-progress-check",
+  "version": 1,
+  "problemAssignment": {
+    "required": ["problemName", "problemUrl"],
+    "optional": ["category", "difficulty", "scheduledAt", "targetPattern"]
+  },
+  "evidenceArtifact": {
+    "schema": "thirdstreet.algoexpert.progress-check.v1",
+    "toolPath": "output-tools/algoexpert-progress-check.html",
+    "requiredSignals": [
+      "problem.name",
+      "problem.url",
+      "attempt.minutesSpent",
+      "attempt.outcome",
+      "attempt.assistance",
+      "attempt.confidence",
+      "next.action"
+    ],
+    "diagnosticSignals": [
+      "attempt.approach",
+      "attempt.exactGap",
+      "attempt.complexity",
+      "next.notes"
+    ]
+  },
+  "schedulerRules": {
+    "solved-independent": "eligible-for-related-transfer-or-delayed-retest",
+    "solved-with-help": "record-gap-and-schedule-closed-book-retest",
+    "partial": "record-gap-and-target-smallest-blocker",
+    "not-solved": "record-gap-and-prescribe-remediation-before-retest",
+    "stopped-timebox": "preserve-attempt-state-and-reschedule-without-assuming-failure"
+  },
+  "boundaries": [
+    "Do not scrape AlgoExpert proprietary problem or solution content.",
+    "Do not call undocumented AlgoExpert APIs.",
+    "Completion on AlgoExpert is not equivalent to mastery.",
+    "Use the learner submission plus independent output evidence for mastery inference."
+  ]
+}
